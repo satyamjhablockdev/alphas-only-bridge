@@ -44,10 +44,10 @@
   particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const particleMat = new THREE.PointsMaterial({
-    size: 0.022,
+    size: 0.018,
     vertexColors: true,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.35,
     sizeAttenuation: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
@@ -69,13 +69,13 @@
   orb.position.set(3.6, -0.5, -2.2);
   scene.add(orb);
 
-  // Wireframe overlay — magenta tinted
+  // Wireframe overlay — magenta tinted, very subtle
   const wireGeo = new THREE.SphereGeometry(1.72, 18, 18);
   const wireMat = new THREE.MeshBasicMaterial({
     color: 0x942753,
     wireframe: true,
     transparent: true,
-    opacity: 0.10,
+    opacity: 0.04,
   });
   const wire = new THREE.Mesh(wireGeo, wireMat);
   wire.position.copy(orb.position);
@@ -99,18 +99,18 @@
     color: 0xF3966F,
     wireframe: true,
     transparent: true,
-    opacity: 0.10,
+    opacity: 0.04,
   });
   const wire2 = new THREE.Mesh(wire2Geo, wire2Mat);
   wire2.position.copy(orb2.position);
   scene.add(wire2);
 
-  // ── Ambient ring — peach accent ────────────────────────
+  // ── Ambient ring — peach accent, very subtle ───────────
   const ringGeo = new THREE.TorusGeometry(3.0, 0.005, 2, 128);
   const ringMat = new THREE.MeshBasicMaterial({
     color: 0xF3966F,
     transparent: true,
-    opacity: 0.14,
+    opacity: 0.05,
   });
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.position.set(0, 0, -4);
@@ -122,7 +122,7 @@
   const ring2Mat = new THREE.MeshBasicMaterial({
     color: 0x1B3158,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.08,
   });
   const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
   ring2.position.set(0, 0, -5);
