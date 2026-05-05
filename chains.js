@@ -14,21 +14,21 @@ const _logoTag = (file, alt) =>
   `<img src="assets/chains/${file}" alt="${alt}" loading="lazy" decoding="async" />`;
 
 const CHAIN_LOGOS = {
-  ethereum:   _logoTag('ethereum.png',   'Ethereum'),
-  avalanche:  _logoTag('avalanche.png',  'Avalanche'),
-  optimism:   _logoTag('optimism.png',   'Optimism'),
-  arbitrum:   _logoTag('arbitrum.png',   'Arbitrum'),
-  base:       _logoTag('base.png',       'Base'),
-  polygon:    _logoTag('polygon.png',    'Polygon'),
-  unichain:   _logoTag('unichain.png',   'Unichain'),
-  linea:      _logoTag('linea.png',      'Linea'),
-  sonic:      _logoTag('sonic.png',      'Sonic'),
-  worldchain: _logoTag('worldchain.png', 'World Chain'),
-  monad:      _logoTag('monad.png',      'Monad'),
-  hyperevm:   _logoTag('hyperliquid.png','HyperEVM'),
-  ink:        _logoTag('ink.png',        'Ink'),
-  arc:        _logoTag('arc.png',        'Arc'),
-  morph:      _logoTag('morph.png',      'Morph'),
+  ethereum:   _logoTag('ethereum.svg',    'Ethereum'),
+  avalanche:  _logoTag('avalanche.webp',  'Avalanche'),
+  optimism:   _logoTag('optimism.png',    'Optimism'),
+  arbitrum:   _logoTag('arbitrum.png',    'Arbitrum'),
+  base:       _logoTag('base.jpg',        'Base'),
+  polygon:    _logoTag('polygon.jpg',     'Polygon'),
+  unichain:   _logoTag('unichain.png',    'Unichain'),
+  linea:      _logoTag('linea.jpg',       'Linea'),
+  sonic:      _logoTag('sonic.png',       'Sonic'),
+  worldchain: _logoTag('worldchain.png',  'World Chain'),
+  monad:      _logoTag('monad.jpg',       'Monad'),
+  hyperevm:   _logoTag('hyperliquid.webp','HyperEVM'),
+  ink:        _logoTag('ink.jpg',         'Ink'),
+  arc:        _logoTag('arc.jpg',         'Arc'),
+  morph:      _logoTag('morph.jpg',       'Morph'),
 };
 
 const CHAINS = {
