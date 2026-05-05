@@ -52,7 +52,8 @@
   --ff-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 }
 
-html, body { height: 100%; overflow-x: hidden; }
+html, body { min-height: 100%; overflow-x: hidden; }
+html { -webkit-text-size-adjust: 100%; } /* prevent iOS auto-zoom */
 
 body {
   background: var(--bg);
@@ -121,6 +122,9 @@ body::before {
   align-items: center;
   justify-content: space-between;
   padding: 1.15rem 2.2rem;
+  padding-left: max(2.2rem, env(safe-area-inset-left));
+  padding-right: max(2.2rem, env(safe-area-inset-right));
+  padding-top: max(1.15rem, env(safe-area-inset-top));
   border-bottom: 1px solid var(--border);
   background: rgba(7,8,12,0.65);
   backdrop-filter: blur(28px) saturate(140%);
@@ -130,7 +134,19 @@ body::before {
   z-index: 100;
 }
 
-.logo-group { display: flex; align-items: center; gap: 0.75rem; }
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0; /* allow shrinking */
+}
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.logo-name { white-space: nowrap; }
+.logo-sub { white-space: nowrap; }
 
 .logo-mark {
   width: 36px; height: 36px;
@@ -236,7 +252,7 @@ body::before {
 .main {
   flex: 1;
   display: grid;
-  grid-template-columns: 340px 1fr 300px;
+  grid-template-columns: 340px minmax(0, 1fr) 300px;
   gap: 2.2rem;
   padding: 3rem 2.2rem;
   max-width: 1320px;
@@ -244,6 +260,9 @@ body::before {
   width: 100%;
   align-items: start;
 }
+/* Ensure grid items can shrink below their content size — prevents the
+   bridge card from forcing horizontal overflow on narrow screens. */
+.info-panel, .bridge-wrap, .history-panel { min-width: 0; }
 
 /* ─── INFO PANEL ────────────────────────────────────────── */
 .info-panel {
@@ -1518,22 +1537,240 @@ body::before {
   color: var(--text);
 }
 
-/* Responsive */
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+
+/* Tablet — single column, content-width capped */
 @media (max-width: 1100px) {
   .main {
-    grid-template-columns: 1fr;
-    max-width: 500px;
-    gap: 1.6rem;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 540px;
+    gap: 1.5rem;
   }
-  .info-panel, .history-panel { position: relative; top: auto; }
-  .brand-headline { font-size: 2.2rem; }
+  .info-panel, .history-panel {
+    position: relative;
+    top: auto;
+  }
+  /* On mobile/tablet, reorder: bridge first, then history, then info panel */
+  .bridge-wrap { order: 1; }
+  .history-panel { order: 2; }
+  .info-panel { order: 3; }
+
+  .brand-headline { font-size: 2.1rem; }
 }
+
+/* Mobile — touch-optimized, reduced visual weight */
 @media (max-width: 640px) {
-  .header { padding: 1rem; }
-  .main { padding: 1.5rem 1rem; }
+  /* Header */
+  .header {
+    padding: 0.85rem 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .logo-mark {
+    width: 30px; height: 30px;
+    flex-shrink: 0;
+  }
+  .logo-mark img, .logo-mark svg { width: 20px; height: 20px; }
+  .logo-name { font-size: 1.2rem; }
   .logo-sub { display: none; }
-  .bridge-card { padding: 1.5rem; }
-  .brand-headline { font-size: 1.85rem; }
-  .bridge-title h2 { font-size: 1.95rem; }
-  .amount-input { font-size: 1.7rem; }
+  /* Hide the network pill on small mobile — connect button is enough */
+  .network-pill { display: none; }
+  .header-right { gap: 0.5rem; flex-shrink: 0; }
+  .btn-connect {
+    padding: 0.5rem 0.95rem;
+    font-size: 0.78rem;
+  }
+
+  /* Main layout — generous tap-friendly padding */
+  .main {
+    padding: 1.5rem 1rem 2rem;
+    gap: 1.5rem;
+  }
+
+  /* Brand statement — keep the editorial feel but fit screens */
+  .brand-statement { margin-bottom: 0.3rem; }
+  .brand-eyebrow {
+    font-size: 0.6rem;
+    margin-bottom: 0.7rem;
+  }
+  .brand-headline {
+    font-size: 1.85rem;
+    line-height: 1.08;
+    margin-bottom: 0.8rem;
+  }
+  .brand-sub { font-size: 0.86rem; }
+
+  /* Bridge card */
+  .bridge-card {
+    padding: 1.4rem 1.25rem;
+    border-radius: 8px;
+  }
+  .bridge-title { margin-bottom: 1.3rem; }
+  .bridge-title h2 { font-size: 2rem; }
+
+  /* Amount field — keep visually punchy but tappable */
+  .amount-input {
+    font-size: 1.85rem;
+    padding: 0.95rem 1rem;
+  }
+  .amount-suffix { padding: 0 0.9rem; }
+  .token-badge { font-size: 0.78rem; }
+
+  /* Network selector — bigger tap target */
+  .network-selector {
+    padding: 0.95rem 0.95rem;
+    gap: 0.65rem;
+  }
+  .net-icon { width: 30px; height: 30px; }
+  .net-label { font-size: 0.95rem; }
+
+  /* Receive box — slightly tighter */
+  .receive-amount { font-size: 1.25rem; }
+
+  /* Bridge button — bigger tap target */
+  .btn-bridge {
+    padding: 1.05rem;
+    font-size: 0.92rem;
+    margin-top: 1.3rem;
+  }
+
+  /* Status step icons / dots */
+  .step-icon { width: 26px; height: 26px; }
+  .step-name { font-size: 0.84rem; }
+  .step-desc { font-size: 0.66rem; }
+
+  /* Info panel — looser, no longer card-bordered */
+  .info-card { padding: 0.85rem 0; gap: 0.75rem; }
+  .info-icon { width: 24px; height: 24px; }
+  .info-body h4 { font-size: 0.84rem; }
+  .info-body p { font-size: 0.78rem; }
+
+  /* Chain pills — bigger to tap */
+  .chain-pill {
+    padding: 0.4rem 0.75rem 0.4rem 0.5rem;
+    font-size: 0.72rem;
+  }
+  .chain-pill .chain-logo { width: 16px; height: 16px; }
+
+  /* History */
+  .history-item { padding: 0.95rem 0; }
+  .history-route { font-size: 0.82rem; }
+  .history-amount { font-size: 1.05rem; }
+
+  /* Footer wraps cleanly */
+  .footer {
+    padding: 1.5rem 1rem 2rem;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    text-align: center;
+    font-size: 0.66rem;
+  }
+
+  /* Modal — bottom-sheet on mobile, slides up from bottom */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+    border: 1px solid var(--border-2);
+    border-bottom: 0;
+    animation: sheet-in 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  @keyframes sheet-in {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  /* Drag indicator at top of bottom-sheet modals */
+  .modal::before {
+    content: "";
+    position: absolute;
+    top: 0.55rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px; height: 4px;
+    border-radius: 2px;
+    background: var(--border-2);
+  }
+  .modal-header {
+    padding: 1.5rem 1.25rem 1rem;
+  }
+  .modal-header h3 { font-size: 1.35rem; }
+  .modal-search { padding: 0.85rem 1.25rem; }
+  .modal-list { padding: 0.5rem 0.5rem max(env(safe-area-inset-bottom), 0.5rem); }
+
+  .modal-network-item {
+    padding: 0.85rem 0.85rem;
+    gap: 0.85rem;
+  }
+  .modal-net-icon { width: 38px; height: 38px; }
+  .modal-net-name { font-size: 0.95rem; }
+
+  /* Claims modal mobile-friendly stack */
+  .claims-modal-inner { max-height: 90vh; }
+  .claims-modal-title h3 { font-size: 1.3rem; }
+  .claims-lookup {
+    padding: 0.95rem 1.25rem;
+  }
+  .claims-lookup-row {
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .claims-select { width: 100%; }
+  .claims-tx-input { width: 100%; padding: 0.7rem 0.85rem; font-size: 0.82rem; }
+  .btn-claims-check { width: 100%; padding: 0.75rem; }
+  .claims-scan-bar {
+    padding: 0.85rem 1.25rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+  }
+  .btn-claims-scan {
+    justify-content: center;
+    padding: 0.7rem;
+  }
+  .claims-results {
+    padding: 0.75rem 1.25rem max(env(safe-area-inset-bottom), 1rem);
+    max-height: none;
+  }
+
+  /* Find Unclaimed in history header — slightly bigger tap */
+  .btn-find-unclaimed {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.62rem;
+  }
+
+  /* Dim the 3D scene on mobile (it costs frame budget for little visual gain) */
+  #bg-canvas { opacity: 0.35; }
+  .bg-grain { opacity: 0.2; }
+}
+
+/* Very small phones (≤380px) */
+@media (max-width: 380px) {
+  .brand-headline { font-size: 1.6rem; }
+  .bridge-title h2 { font-size: 1.7rem; }
+  .amount-input { font-size: 1.55rem; }
+  .logo-name { font-size: 1.15rem; }
+  .net-name-text { display: none; }
+  /* Keep just the dot when truly tight */
+  .network-pill { padding: 0.4rem 0.6rem; }
+}
+
+/* Touch-friendly: prevent iOS double-tap zoom on buttons & disable text selection on tap */
+button, .network-selector, .modal-network-item, .swap-btn,
+.chain-pill, .max-btn, .btn-bridge, .btn-connect,
+.btn-claim-now, .btn-claims-check, .btn-claims-scan,
+.btn-find-unclaimed, .recipient-toggle {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* On hover-incapable devices (touch), kill all hover styles that would stick */
+@media (hover: none) {
+  .info-card:hover { transform: none; }
+  .swap-btn:hover { border-color: var(--border-2); color: var(--text-dim); }
+  .bridge-card:hover { border-color: var(--border-2); }
 }

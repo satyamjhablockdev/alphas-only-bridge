@@ -1,7 +1,11 @@
-// ─── Card 3D tilt ────────────────────────────────────────
+// ─── Card 3D tilt (pointer devices only) ────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const card = document.getElementById('bridge-card');
   if (!card) return;
+
+  // Skip tilt on touch devices — there's no cursor to track
+  const isTouch = window.matchMedia('(hover: none)').matches;
+  if (isTouch) return;
 
   card.addEventListener('mousemove', (e) => {
     const rect = card.getBoundingClientRect();

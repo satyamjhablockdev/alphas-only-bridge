@@ -3,8 +3,19 @@
   const canvas = document.getElementById('bg-canvas');
   if (!canvas || typeof THREE === 'undefined') return;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Detect mobile / low-power devices to scale back the scene gracefully
+  const isMobile = window.matchMedia('(max-width: 640px)').matches
+    || ('ontouchstart' in window && window.innerWidth < 900);
+
+  // Skip the scene entirely on very small screens — saves battery, avoids jank.
+  // The CSS gradient backgrounds carry the visual mood instead.
+  if (window.matchMedia('(max-width: 380px)').matches) {
+    canvas.style.display = 'none';
+    return;
+  }
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0x000000, 0);
 
@@ -20,7 +31,7 @@
   const ARC_CREAM   = new THREE.Color(0xF3CA94);
 
   // ── Particle field — interpolates across Arc gradient ──
-  const PARTICLE_COUNT = 700;
+  const PARTICLE_COUNT = isMobile ? 250 : 700;
   const positions = new Float32Array(PARTICLE_COUNT * 3);
   const colors = new Float32Array(PARTICLE_COUNT * 3);
 
@@ -152,10 +163,13 @@
   let mouseX = 0, mouseY = 0;
   let targetX = 0, targetY = 0;
 
-  document.addEventListener('mousemove', (e) => {
-    mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
-    mouseY = -(e.clientY / window.innerHeight - 0.5) * 2;
-  });
+  // Skip mouse parallax on touch / mobile — pointer never moves there
+  if (!isMobile) {
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = -(e.clientY / window.innerHeight - 0.5) * 2;
+    });
+  }
 
   // ── Resize ─────────────────────────────────────────────
   window.addEventListener('resize', () => {
