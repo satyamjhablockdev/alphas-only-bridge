@@ -6,40 +6,29 @@ const CCTP_TOKEN_MESSENGER = '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA';
 const CCTP_MSG_TRANSMITTER = '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275';
 const IRIS_API = 'https://iris-api-sandbox.circle.com';
 
-// ─── Chain logo SVGs ──────────────────────────────────────
-// Each is a self-contained 24×24 SVG that scales to any size.
-// Reproduced from each chain's official brand mark.
+// ─── Chain logo references ────────────────────────────────
+// Official brand PNG logos served from /assets/chains/.
+// Each entry is an <img> tag string so existing rendering code (which uses
+// innerHTML to inject the icon) keeps working unchanged.
+const _logoTag = (file, alt) =>
+  `<img src="assets/chains/${file}" alt="${alt}" loading="lazy" decoding="async" />`;
 
 const CHAIN_LOGOS = {
-  ethereum: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#627EEA"/><g fill="#fff"><path d="M12.4 4v6.05l5.1 2.27z" fill-opacity=".6"/><path d="M12.4 4L7.3 12.32l5.1-2.27z"/><path d="M12.4 16.05V20l5.1-7.06z" fill-opacity=".6"/><path d="M12.4 20v-3.96L7.3 12.95z"/><path d="M12.4 15.05l5.1-2.73-5.1-2.27z" fill-opacity=".2"/><path d="M7.3 12.32l5.1 2.73V10z" fill-opacity=".6"/></g></svg>`,
-
-  avalanche: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#E84142"/><path d="M14.85 7.7l5.45 9.45h-3.5L14.6 13.7l-1.35 2.4-2.05-3.55 1.7-2.95.95-1.55a1.2 1.2 0 011.05-.6 1.2 1.2 0 011.05.6zM10.65 15l-2.05 3.55a1.2 1.2 0 01-1.05.6H4.05a1.2 1.2 0 01-1.05-.6 1.2 1.2 0 010-1.2L7.55 9.5a1.2 1.2 0 011.05-.6 1.2 1.2 0 011.05.6L11.7 11.5z" fill="#fff"/></svg>`,
-
-  optimism: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#FF0420"/><path d="M8.4 15.4q-1.5 0-2.4-.85-.85-.9-.85-2.45 0-.3.05-.7.2-1.65 1.05-2.6.85-1 2.5-1 1.5 0 2.4.9t.9 2.4q0 .35-.05.7-.25 1.7-1.1 2.65-.85.95-2.5.95zm.15-1.45q.65 0 1.1-.4.45-.4.65-1.2.05-.3.1-.65.05-.4.05-.65 0-.7-.35-1.1-.35-.4-1-.4-.65 0-1.1.4-.5.4-.7 1.2-.05.25-.1.65-.05.35-.05.65 0 .7.35 1.1.35.4 1.05.4zm6.3-2.45h1.2q.55 0 .85-.25.3-.25.4-.7l.05-.4q.05-.4-.15-.6-.2-.25-.7-.25h-1.2zM12.45 15l1.05-7h2.4q1.4 0 2.05.6.65.6.45 1.85l-.05.4q-.2 1.1-.95 1.65-.75.5-2 .5h-1.45l-.35 2z" fill="#fff"/></svg>`,
-
-  arbitrum: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#213147"/><circle cx="12" cy="12" r="11" fill="#12AAFF" fill-opacity="0"/><path d="M12.85 5.5l5.5 8.95-2.4 1.4-3.1-5-2.6 4.2-2.4-1.4z" fill="#28A0F0"/><path d="M14.65 13.65l-1 1.65 2.4 1.4 1-1.65z" fill="#fff"/><path d="M5 12.7v3.65L8.5 18.5l1.4-2.3-3.45-2-1.45-1.5z" fill="#96BEDC"/></svg>`,
-
-  base: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#0052FF"/><path d="M11.95 19.5a7.5 7.5 0 100-15 7.5 7.5 0 00-7.45 6.75h11.05v1.5H4.5a7.5 7.5 0 007.45 6.75z" fill="#fff"/></svg>`,
-
-  polygon: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#8247E5"/><path d="M15.7 9.5l-2.05-1.18a.5.5 0 00-.5 0L11 9.5l-1.45.85-2.05 1.18a.5.5 0 01-.5 0L5.4 10.5a.5.5 0 01-.25-.43V8.42a.5.5 0 01.25-.43l1.6-.93a.5.5 0 01.5 0l1.6.93a.5.5 0 01.25.43v1.18l1.45-.85V7.55a.5.5 0 00-.25-.43L7.55 5.5a.5.5 0 00-.5 0l-3 1.7a.5.5 0 00-.25.42v3.4a.5.5 0 00.25.43l3 1.7a.5.5 0 00.5 0L9.6 12 11 11.13l2.05-1.18a.5.5 0 01.5 0L15.2 11a.5.5 0 01.25.43v1.65a.5.5 0 01-.25.43l-1.6.93a.5.5 0 01-.5 0l-1.6-.93a.5.5 0 01-.25-.43v-1.18L9.8 12.7v1.18a.5.5 0 00.25.43l3 1.7a.5.5 0 00.5 0l3-1.7a.5.5 0 00.25-.43v-3.4a.5.5 0 00-.25-.43l-1.85-1.05z" fill="#fff"/></svg>`,
-
-  unichain: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#FC72FF"/><path d="M12 4.5L5.5 8.5v7L12 19.5l6.5-4v-7zm0 1.85l4.5 2.65v6L12 17.65 7.5 15v-6zM12 9.5l-2.5 1.5v3l2.5 1.5 2.5-1.5v-3z" fill="#fff"/></svg>`,
-
-  linea: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#121212"/><path d="M7 7v10h10v-2.5h-7.5V7H7z" fill="#fff"/><circle cx="15" cy="9" r="2" fill="#61DFFF"/></svg>`,
-
-  sonic: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#FE9A4D"/><path d="M14.5 4.5L7 13.5h4l-2 6 7.5-9h-4l2-6z" fill="#fff"/></svg>`,
-
-  worldchain: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#000"/><circle cx="12" cy="12" r="6" stroke="#fff" stroke-width="1.4" fill="none"/><path d="M6 12h12" stroke="#fff" stroke-width="1.4"/><path d="M12 6c1.8 1.5 2.7 3.5 2.7 6s-.9 4.5-2.7 6c-1.8-1.5-2.7-3.5-2.7-6s.9-4.5 2.7-6z" stroke="#fff" stroke-width="1.4" fill="none"/></svg>`,
-
-  monad: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#836EF9"/><path d="M12 4.5c-2.6 1.5-4 4.4-4 7.5s1.4 6 4 7.5c-1.5-2.1-2.3-4.7-2.3-7.5s.8-5.4 2.3-7.5z" fill="#fff"/><path d="M12 4.5c2.6 1.5 4 4.4 4 7.5s-1.4 6-4 7.5c1.5-2.1 2.3-4.7 2.3-7.5s-.8-5.4-2.3-7.5z" fill="#FBFAF9"/><ellipse cx="12" cy="12" rx="1.6" ry="6.5" fill="#A0055D"/></svg>`,
-
-  hyperevm: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#072724"/><path d="M3.5 13c2.5-3.5 5-3.5 8.5 0s6 3.5 8.5 0v3c-2.5 3.5-5 3.5-8.5 0s-6-3.5-8.5 0v-3z" fill="#97FCE4"/></svg>`,
-
-  ink: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#7132F5"/><path d="M12 4.5c-1.4 3.4-4.5 5.7-4.5 9.5 0 2.5 2 4.5 4.5 4.5s4.5-2 4.5-4.5c0-3.8-3.1-6.1-4.5-9.5z" fill="#fff"/></svg>`,
-
-  arc: `<svg viewBox="0 0 164 171" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="arcgrad-icon" x1="29" y1="-26" x2="32" y2="222" gradientUnits="userSpaceOnUse"><stop stop-color="#1B3158"/><stop offset=".63" stop-color="#3E2B63"/><stop offset="1" stop-color="#942753"/></linearGradient></defs><path fill="url(#arcgrad-icon)" d="M0 171C1.4 129.1 8.5 90.1 20.4 59.7 35.5 21.2 57.4 0 82 0s46.4 21.2 61.5 59.7c7.9 20 13.6 43.8 17 69.7.3 2.3.6 4.6.9 7 .1.1.1.3.1.4 0 0 2 12.5 2.5 34.2h-.2c-3-2.4-38.2-29.9-96.5-22a366 366 0 0 1 4-30.4c22.9-.7 42.9 2 58.3 5.4 0-.4-.1-.7-.2-1.1-3.1-19.6-7.8-37.5-13.8-52.8C105.6 45.6 92.8 30 82 30s-23.6 15.6-33.5 40.6c-2.3 6.1-4.5 12.5-6.5 19.3-2.7 9.6-5 19.8-6.8 30.5-2.7 15.9-4.4 32.9-5 50.6H0z"/></svg>`,
-
-  morph: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#00D88A"/><path d="M5.5 17.5V7.2l3.7 4.6 1.85-2.05 1.85 2.05 3.7-4.6V17.5h-2.05V12.5l-1.65 1.85-1.85-2-1.85 2-1.65-1.85V17.5z" fill="#000"/></svg>`,
+  ethereum:   _logoTag('ethereum.png',   'Ethereum'),
+  avalanche:  _logoTag('avalanche.png',  'Avalanche'),
+  optimism:   _logoTag('optimism.png',   'Optimism'),
+  arbitrum:   _logoTag('arbitrum.png',   'Arbitrum'),
+  base:       _logoTag('base.png',       'Base'),
+  polygon:    _logoTag('polygon.png',    'Polygon'),
+  unichain:   _logoTag('unichain.png',   'Unichain'),
+  linea:      _logoTag('linea.png',      'Linea'),
+  sonic:      _logoTag('sonic.png',      'Sonic'),
+  worldchain: _logoTag('worldchain.png', 'World Chain'),
+  monad:      _logoTag('monad.png',      'Monad'),
+  hyperevm:   _logoTag('hyperliquid.png','HyperEVM'),
+  ink:        _logoTag('ink.png',        'Ink'),
+  arc:        _logoTag('arc.png',        'Arc'),
+  morph:      _logoTag('morph.png',      'Morph'),
 };
 
 const CHAINS = {

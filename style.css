@@ -143,7 +143,11 @@ body::before {
 .logo-mark:hover {
   border-color: var(--text-soft);
 }
-.logo-mark svg { width: 22px; height: auto; }
+.logo-mark svg, .logo-mark img {
+  width: 24px; height: 24px;
+  display: block;
+  object-fit: contain;
+}
 
 .logo-name {
   display: block;
@@ -403,7 +407,11 @@ body::before {
   align-items: center;
   justify-content: center;
 }
-.chain-pill .chain-logo svg { width: 100%; height: 100%; display: block; }
+.chain-pill .chain-logo svg,
+.chain-pill .chain-logo img {
+  width: 100%; height: 100%; display: block;
+  object-fit: cover;
+}
 
 /* ─── BRIDGE CARD ────────────────────────────────────────── */
 .bridge-wrap {
@@ -510,7 +518,10 @@ body::before {
   flex-shrink: 0;
   color: var(--text-soft);
 }
-.net-icon svg { width: 100%; height: 100%; display: block; }
+.net-icon svg, .net-icon img {
+  width: 100%; height: 100%; display: block;
+  object-fit: cover;
+}
 .net-label {
   flex: 1;
   font-family: var(--ff-body);
@@ -571,6 +582,13 @@ body::before {
   font-weight: 600;
   color: var(--text-dim);
   letter-spacing: -0.005em;
+}
+.token-icon {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .balance-row {
@@ -1097,7 +1115,10 @@ body::before {
   background: var(--surface-3);
   flex-shrink: 0;
 }
-.modal-net-icon svg { width: 100%; height: 100%; display: block; }
+.modal-net-icon svg, .modal-net-icon img {
+  width: 100%; height: 100%; display: block;
+  object-fit: cover;
+}
 
 .modal-net-info { flex: 1; }
 .modal-net-name {
