@@ -1,4 +1,4 @@
-// Three.js 3D background — floating orbs and particle field
+// Three.js 3D background — Arc-themed: navy → purple → magenta orbs with peach accents
 (function () {
   const canvas = document.getElementById('bg-canvas');
   if (!canvas || typeof THREE === 'undefined') return;
@@ -12,23 +12,31 @@
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 0, 6);
 
-  // ── Particle field ──────────────────────────────────────
-  const PARTICLE_COUNT = 600;
+  // ── Arc brand palette ──────────────────────────────────
+  const ARC_NAVY    = new THREE.Color(0x1B3158);
+  const ARC_PURPLE  = new THREE.Color(0x3E2B63);
+  const ARC_MAGENTA = new THREE.Color(0x942753);
+  const ARC_PEACH   = new THREE.Color(0xF3966F);
+  const ARC_CREAM   = new THREE.Color(0xF3CA94);
+
+  // ── Particle field — interpolates across Arc gradient ──
+  const PARTICLE_COUNT = 700;
   const positions = new Float32Array(PARTICLE_COUNT * 3);
   const colors = new Float32Array(PARTICLE_COUNT * 3);
 
-  const goldR = 201 / 255, goldG = 168 / 255, goldB = 76 / 255;
-  const creamR = 240 / 255, creamG = 232 / 255, creamB = 216 / 255;
-
   for (let i = 0; i < PARTICLE_COUNT; i++) {
-    positions[i * 3 + 0] = (Math.random() - 0.5) * 20;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 14;
+    positions[i * 3 + 0] = (Math.random() - 0.5) * 22;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 16;
     positions[i * 3 + 2] = (Math.random() - 0.5) * 10 - 4;
 
+    // Mix between two random Arc-palette colors for variety
+    const palette = [ARC_NAVY, ARC_PURPLE, ARC_MAGENTA, ARC_PEACH, ARC_CREAM];
+    const c1 = palette[Math.floor(Math.random() * palette.length)];
+    const c2 = palette[Math.floor(Math.random() * palette.length)];
     const t = Math.random();
-    colors[i * 3 + 0] = goldR * t + creamR * (1 - t);
-    colors[i * 3 + 1] = goldG * t + creamG * (1 - t);
-    colors[i * 3 + 2] = goldB * t + creamB * (1 - t);
+    colors[i * 3 + 0] = c1.r * t + c2.r * (1 - t);
+    colors[i * 3 + 1] = c1.g * t + c2.g * (1 - t);
+    colors[i * 3 + 2] = c1.b * t + c2.b * (1 - t);
   }
 
   const particleGeo = new THREE.BufferGeometry();
@@ -36,90 +44,111 @@
   particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const particleMat = new THREE.PointsMaterial({
-    size: 0.025,
+    size: 0.022,
     vertexColors: true,
     transparent: true,
     opacity: 0.55,
     sizeAttenuation: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
   });
 
   const particles = new THREE.Points(particleGeo, particleMat);
   scene.add(particles);
 
-  // ── Main orb ────────────────────────────────────────────
-  const orbGeo = new THREE.SphereGeometry(1.6, 64, 64);
+  // ── Main orb (deep navy, matte) ────────────────────────
+  const orbGeo = new THREE.SphereGeometry(1.7, 64, 64);
   const orbMat = new THREE.MeshStandardMaterial({
-    color: 0x1a1510,
-    roughness: 0.6,
-    metalness: 0.4,
+    color: 0x1B3158,
+    roughness: 0.65,
+    metalness: 0.35,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.42,
   });
   const orb = new THREE.Mesh(orbGeo, orbMat);
-  orb.position.set(3.5, -0.5, -2);
+  orb.position.set(3.6, -0.5, -2.2);
   scene.add(orb);
 
-  // Wireframe overlay on orb
-  const wireGeo = new THREE.SphereGeometry(1.62, 18, 18);
+  // Wireframe overlay — magenta tinted
+  const wireGeo = new THREE.SphereGeometry(1.72, 18, 18);
   const wireMat = new THREE.MeshBasicMaterial({
-    color: 0xC9A84C,
+    color: 0x942753,
     wireframe: true,
     transparent: true,
-    opacity: 0.06,
+    opacity: 0.10,
   });
   const wire = new THREE.Mesh(wireGeo, wireMat);
   wire.position.copy(orb.position);
   scene.add(wire);
 
-  // Second smaller orb
-  const orb2Geo = new THREE.SphereGeometry(0.7, 40, 40);
+  // ── Second orb (purple, smaller) ───────────────────────
+  const orb2Geo = new THREE.SphereGeometry(0.72, 40, 40);
   const orb2Mat = new THREE.MeshStandardMaterial({
-    color: 0x120f0a,
+    color: 0x3E2B63,
     roughness: 0.7,
     metalness: 0.3,
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.55,
   });
   const orb2 = new THREE.Mesh(orb2Geo, orb2Mat);
-  orb2.position.set(-4, 1.5, -3);
+  orb2.position.set(-4.2, 1.6, -3);
   scene.add(orb2);
 
-  const wire2Geo = new THREE.SphereGeometry(0.72, 12, 12);
+  const wire2Geo = new THREE.SphereGeometry(0.74, 12, 12);
   const wire2Mat = new THREE.MeshBasicMaterial({
-    color: 0xC9A84C,
+    color: 0xF3966F,
     wireframe: true,
     transparent: true,
-    opacity: 0.08,
+    opacity: 0.10,
   });
   const wire2 = new THREE.Mesh(wire2Geo, wire2Mat);
   wire2.position.copy(orb2.position);
   scene.add(wire2);
 
-  // ── Ambient ring ────────────────────────────────────────
-  const ringGeo = new THREE.TorusGeometry(2.8, 0.004, 2, 128);
+  // ── Ambient ring — peach accent ────────────────────────
+  const ringGeo = new THREE.TorusGeometry(3.0, 0.005, 2, 128);
   const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xC9A84C,
+    color: 0xF3966F,
     transparent: true,
-    opacity: 0.12,
+    opacity: 0.14,
   });
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.position.set(0, 0, -4);
-  ring.rotation.x = Math.PI * 0.15;
+  ring.rotation.x = Math.PI * 0.18;
   scene.add(ring);
 
-  // ── Lighting ────────────────────────────────────────────
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+  // Second ring (navy, larger)
+  const ring2Geo = new THREE.TorusGeometry(4.5, 0.003, 2, 128);
+  const ring2Mat = new THREE.MeshBasicMaterial({
+    color: 0x1B3158,
+    transparent: true,
+    opacity: 0.22,
+  });
+  const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+  ring2.position.set(0, 0, -5);
+  ring2.rotation.x = -Math.PI * 0.1;
+  scene.add(ring2);
+
+  // ── Lighting ───────────────────────────────────────────
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.18);
   scene.add(ambientLight);
 
-  const goldLight = new THREE.PointLight(0xC9A84C, 2.5, 12);
-  goldLight.position.set(2, 2, 2);
-  scene.add(goldLight);
+  // Magenta key light — orbits and gives the magenta glow
+  const magentaLight = new THREE.PointLight(0x942753, 3.0, 14);
+  magentaLight.position.set(2, 2, 2);
+  scene.add(magentaLight);
 
-  const coldLight = new THREE.PointLight(0xffffff, 0.8, 10);
-  coldLight.position.set(-3, -2, 1);
-  scene.add(coldLight);
+  // Peach fill light — warmth on the right side
+  const peachLight = new THREE.PointLight(0xF3966F, 1.5, 10);
+  peachLight.position.set(4, -1, 1);
+  scene.add(peachLight);
 
-  // ── Mouse parallax ──────────────────────────────────────
+  // Navy rim light — depth
+  const navyLight = new THREE.PointLight(0x1B3158, 1.2, 12);
+  navyLight.position.set(-3, -2, 1);
+  scene.add(navyLight);
+
+  // ── Mouse parallax ─────────────────────────────────────
   let mouseX = 0, mouseY = 0;
   let targetX = 0, targetY = 0;
 
@@ -128,14 +157,14 @@
     mouseY = -(e.clientY / window.innerHeight - 0.5) * 2;
   });
 
-  // ── Resize ──────────────────────────────────────────────
+  // ── Resize ─────────────────────────────────────────────
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // ── Animation loop ──────────────────────────────────────
+  // ── Animation loop ─────────────────────────────────────
   const clock = new THREE.Clock();
 
   function animate() {
@@ -146,32 +175,38 @@
     targetX += (mouseX - targetX) * 0.03;
     targetY += (mouseY - targetY) * 0.03;
 
-    // Rotate particles slowly
+    // Particles drift
     particles.rotation.y = t * 0.018;
     particles.rotation.x = t * 0.006;
 
     // Orbs float
-    orb.position.y = -0.5 + Math.sin(t * 0.4) * 0.18;
+    orb.position.y = -0.5 + Math.sin(t * 0.4) * 0.2;
     orb.rotation.y = t * 0.08;
     wire.position.y = orb.position.y;
     wire.rotation.y = -t * 0.06;
 
-    orb2.position.y = 1.5 + Math.sin(t * 0.3 + 1) * 0.12;
+    orb2.position.y = 1.6 + Math.sin(t * 0.3 + 1) * 0.14;
     orb2.rotation.x = t * 0.05;
     wire2.position.y = orb2.position.y;
+    wire2.rotation.z = t * 0.04;
 
-    // Ring pulse opacity
-    ringMat.opacity = 0.08 + Math.sin(t * 0.5) * 0.04;
+    // Ring pulse + rotation
+    ringMat.opacity = 0.10 + Math.sin(t * 0.5) * 0.04;
     ring.rotation.z = t * 0.03;
+    ring2.rotation.z = -t * 0.02;
+    ring2Mat.opacity = 0.18 + Math.sin(t * 0.4 + 2) * 0.06;
 
     // Camera parallax
-    camera.position.x = targetX * 0.3;
-    camera.position.y = targetY * 0.2;
+    camera.position.x = targetX * 0.35;
+    camera.position.y = targetY * 0.22;
     camera.lookAt(0, 0, 0);
 
-    // Gold light orbit
-    goldLight.position.x = Math.cos(t * 0.3) * 3;
-    goldLight.position.z = Math.sin(t * 0.3) * 3 + 1;
+    // Magenta light orbit
+    magentaLight.position.x = Math.cos(t * 0.3) * 3;
+    magentaLight.position.z = Math.sin(t * 0.3) * 3 + 1;
+
+    // Peach light slow sway
+    peachLight.position.y = -1 + Math.sin(t * 0.25) * 0.8;
 
     renderer.render(scene, camera);
   }
