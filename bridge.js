@@ -132,16 +132,27 @@ function setNetworkPillSwitching(name) {
 }
 
 async function switchToChain(chain) {
+  const targetChainId = chain.params.chainId;
+
+  // Short-circuit if already on the target chain
+  const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+  if (currentChainId.toLowerCase() === targetChainId.toLowerCase()) {
+    if (typeof ethers !== 'undefined') {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+    }
+    return;
+  }
+
   try {
     await window.ethereum.request({
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: chain.params.chainId }],
+      params: [{ chainId: targetChainId }],
     });
   } catch (switchErr) {
-    // 4902 = chain genuinely not in wallet — add it then the wallet auto-switches.
-    // Only match the exact code; string-matching error messages is too broad and
-    // triggers wallet_addEthereumChain for chains the user already has under a
-    // different chain ID, creating duplicates with bad RPC settings.
+    // 4902 = chain not in wallet — add it, then explicitly switch (some wallets
+    // don't auto-switch after add). Only match the exact code; string-matching
+    // error messages is too broad and creates duplicates under wrong chain IDs.
     const code = switchErr.code ?? switchErr?.error?.code ?? switchErr?.data?.originalError?.code;
 
     if (code === 4902) {
@@ -150,6 +161,15 @@ async function switchToChain(chain) {
           method: 'wallet_addEthereumChain',
           params: [chain.params],
         });
+        // Some wallets don't auto-switch after add — explicitly switch now
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: targetChainId }],
+          });
+        } catch (postAddErr) {
+          if (postAddErr.code !== 4001) throw postAddErr;
+        }
       } catch (addErr) {
         if (addErr.code !== 4001) throw addErr; // 4001 = user rejected — silent
       }
@@ -157,7 +177,11 @@ async function switchToChain(chain) {
       throw switchErr; // real error, propagate
     }
   }
-  // Re-init provider after switch so signer is on the new chain
+
+  // Wait briefly for chainChanged event to propagate to the wallet's RPC
+  await sleep(200);
+
+  // Verify and re-init provider on the new chain
   if (typeof ethers !== 'undefined') {
     provider = new ethers.providers.Web3Provider(window.ethereum);
     signer = provider.getSigner();
@@ -748,27 +772,96 @@ function populateClaimsSourceSelect() {
   });
 }
 
+// ── Sanitize tx hash input ───────────────────────────────
+// Accepts a full explorer URL, a raw hex hash, or a hash without the 0x prefix.
+// Returns a normalized 0x-prefixed 64-char hex string, or null if invalid.
+function sanitizeTxHash(input) {
+  if (!input) return null;
+  const trimmed = String(input).trim();
+  // Match a 64-char hex with 0x prefix anywhere in the string (handles URLs)
+  const withPrefix = trimmed.match(/0x[a-fA-F0-9]{64}/);
+  if (withPrefix) return withPrefix[0].toLowerCase();
+  // Also accept a bare 64-char hex (no prefix)
+  const noPrefix = trimmed.match(/^[a-fA-F0-9]{64}$/);
+  if (noPrefix) return ('0x' + noPrefix[0]).toLowerCase();
+  return null;
+}
+
 // ── Manual single-tx check ───────────────────────────────
 async function checkManualTx() {
-  const txHash = document.getElementById('claims-tx-input').value.trim();
+  const rawInput = document.getElementById('claims-tx-input').value;
+  const txHash = sanitizeTxHash(rawInput);
   const domain = parseInt(document.getElementById('claims-src-chain').value);
-  if (!txHash || isNaN(domain)) {
-    setClaimsScanInfo('Select a source chain and enter a transaction hash.', true);
+
+  if (isNaN(domain)) {
+    setClaimsScanInfo('Select a source chain.', true);
     return;
   }
-  setClaimsScanInfo('Checking attestation…', false, true);
+  if (!txHash) {
+    setClaimsScanInfo('Enter a valid transaction hash (0x-prefixed, 64 hex chars). Paste only the hash, not the explorer URL.', true);
+    return;
+  }
+  // If we extracted a hash from a URL, write the cleaned version back so the
+  // user sees what we're using.
+  if (rawInput.trim() !== txHash) {
+    document.getElementById('claims-tx-input').value = txHash;
+  }
+
+  setClaimsScanInfo('Fetching attestation from Circle…', false, true);
+  // Clear any previous results so the loading message is visible
+  document.getElementById('claims-results').innerHTML = '';
+
   try {
     const msg = await fetchAttestation(txHash, domain);
     if (!msg) {
-      setClaimsScanInfo('No attestation found for this transaction.', true);
+      setClaimsScanInfo(
+        'Circle has not yet indexed this burn. Attestations are typically ready within 30–60 seconds (longer for chains with slow finality). Wait a moment and try again.',
+        true
+      );
       return;
     }
+
     const item = buildClaimItem(msg, txHash, domain);
-    if (!item) { setClaimsScanInfo('Could not decode message.', true); return; }
+    if (!item) { setClaimsScanInfo('Could not decode the attestation message.', true); return; }
+
+    // Check destination chain to see if this nonce was already minted
+    setClaimsScanInfo('Verifying mint status on destination chain…', false, true);
+    const claimed = await isAlreadyClaimed(item);
+    if (claimed === true) item.claimed = true;
+
     renderClaimsItems([item], true);
-    setClaimsScanInfo('');
+    if (claimed === true) {
+      setClaimsScanInfo('This transfer has already been claimed on the destination chain. No further action required.');
+    } else if (item.status === 'complete') {
+      setClaimsScanInfo('Attestation ready. You can claim now.');
+    } else {
+      setClaimsScanInfo('Attestation is still pending Circle confirmations. Check back shortly.');
+    }
   } catch (e) {
     setClaimsScanInfo(`Error: ${extractErrorMessage(e)}`, true);
+  }
+}
+
+// ── Has this nonce already been minted on the destination? ──────────
+// Queries MessageTransmitterV2.usedNonces(bytes32) on the destination chain
+// via that chain's public RPC. Returns true | false | null (null = couldn't verify).
+const TRANSMITTER_USED_NONCES_ABI = [
+  'function usedNonces(bytes32) view returns (uint256)',
+];
+async function isAlreadyClaimed(item) {
+  if (!item || !item.destChainObj || !item.irisMsg?.eventNonce) return null;
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(item.destChainObj.rpc);
+    const transmitter = new ethers.Contract(
+      item.destChainObj.msgTransmitter,
+      TRANSMITTER_USED_NONCES_ABI,
+      provider
+    );
+    const used = await transmitter.usedNonces(item.irisMsg.eventNonce);
+    return used && !used.isZero();
+  } catch (e) {
+    console.warn('usedNonces check failed:', e?.message);
+    return null;
   }
 }
 
@@ -823,11 +916,32 @@ async function runClaimsCheck() {
     console.warn('Chain scan error:', e.message);
   }
 
+  // 3. For each found item with a complete attestation, check if it was already
+  //    claimed on the destination chain so we can flag it accordingly.
+  if (found.length) {
+    setClaimsScanInfo('Verifying mint status on destination chains…');
+    await Promise.all(found.map(async (item) => {
+      if (item.status === 'complete') {
+        const claimed = await isAlreadyClaimed(item);
+        if (claimed === true) item.claimed = true;
+      }
+    }));
+  }
+
   renderClaimsItems(found, false);
   setScanBtn(false);
-  setClaimsScanInfo(found.length
-    ? `Found ${found.length} item${found.length > 1 ? 's' : ''}.`
-    : 'Scan complete.');
+  if (!found.length) {
+    setClaimsScanInfo('Scan complete. No CCTP transfers found in your history or recent burns on the connected chain.');
+  } else {
+    const ready = found.filter(i => i.status === 'complete' && !i.claimed).length;
+    const claimed = found.filter(i => i.claimed).length;
+    const pending = found.length - ready - claimed;
+    const parts = [];
+    if (ready) parts.push(`${ready} ready to claim`);
+    if (pending) parts.push(`${pending} pending`);
+    if (claimed) parts.push(`${claimed} already claimed`);
+    setClaimsScanInfo(`Scan complete · ${parts.join(' · ')}.`);
+  }
   claimsRunning = false;
 }
 
@@ -947,8 +1061,9 @@ function renderClaimsItems(items, manual) {
     return;
   }
 
-  const claimable = items.filter(i => i.status === 'complete');
-  const pending   = items.filter(i => i.status !== 'complete');
+  const claimable = items.filter(i => i.status === 'complete' && !i.claimed);
+  const pending   = items.filter(i => i.status !== 'complete' && !i.claimed);
+  const claimed   = items.filter(i => i.claimed);
 
   let html = '';
   if (claimable.length) {
@@ -959,11 +1074,16 @@ function renderClaimsItems(items, manual) {
     html += `<div class="claims-section-label" style="margin-top:0.75rem">Pending attestation (${pending.length})</div>`;
     html += pending.map(i => claimItemHTML(i)).join('');
   }
+  if (claimed.length) {
+    html += `<div class="claims-section-label" style="margin-top:0.75rem">Already claimed (${claimed.length})</div>`;
+    html += claimed.map(i => claimItemHTML(i)).join('');
+  }
   el.innerHTML = html;
 }
 
 function claimItemHTML(item) {
-  const isReady = item.status === 'complete';
+  const isClaimed = !!item.claimed;
+  const isReady = item.status === 'complete' && !isClaimed;
   const srcExplorer = item.sourceChainObj?.explorer;
   const shortHash = `${item.txHash.slice(0, 8)}…${item.txHash.slice(-6)}`;
   const txLink = srcExplorer
@@ -972,9 +1092,23 @@ function claimItemHTML(item) {
 
   const amount = item.amount !== '?' ? `${item.amount} USDC` : 'USDC';
   const regKey = item.txHash.slice(2, 14);
-  claimsRegistry[regKey] = item; // store for safe retrieval by onclick
+  claimsRegistry[regKey] = item;
 
-  return `<div class="claim-item" id="claim-${regKey}">
+  let badgeClass, badgeText;
+  if (isClaimed)      { badgeClass = 'claimed'; badgeText = 'Already minted'; }
+  else if (isReady)   { badgeClass = 'ready';   badgeText = 'Attestation ready'; }
+  else                { badgeClass = 'pending'; badgeText = 'Pending attestation'; }
+
+  let action;
+  if (isClaimed) {
+    action = `<span class="claim-action-note">Funds already on ${item.destChainObj?.shortName || 'destination'}</span>`;
+  } else if (isReady) {
+    action = `<button class="btn-claim-now" onclick="claimMint(claimsRegistry['${regKey}'], this)">Claim now</button>`;
+  } else {
+    action = `<span class="claim-action-note">Check back shortly</span>`;
+  }
+
+  return `<div class="claim-item${isClaimed ? ' is-claimed' : ''}" id="claim-${regKey}">
     <div class="claim-item-header">
       <div class="claim-route">
         <span>${item.sourceChain}</span>
@@ -987,16 +1121,11 @@ function claimItemHTML(item) {
       <span class="claim-tx">${txLink}</span>
     </div>
     <div class="claim-status-row">
-      <span class="claim-badge ${isReady ? 'ready' : 'pending'}">
+      <span class="claim-badge ${badgeClass}">
         <span class="badge-dot"></span>
-        ${isReady ? 'Attestation ready' : 'Pending attestation'}
+        ${badgeText}
       </span>
-      ${isReady
-        ? `<button class="btn-claim-now" onclick="claimMint(claimsRegistry['${regKey}'], this)">
-             Claim Now
-           </button>`
-        : `<span style="font-size:0.7rem;color:var(--muted)">Check back soon</span>`
-      }
+      ${action}
     </div>
   </div>`;
 }

@@ -242,7 +242,7 @@ const CHAINS = {
     explorer: 'https://testnet.soniclabs.com',
     nativeCurrency: { name: 'Sonic', symbol: 'S', decimals: 18 },
     params: {
-      chainId: '0xDEBE',
+      chainId: '0xDEDE',
       chainName: 'Sonic Blaze Testnet',
       rpcUrls: ['https://rpc.blaze.soniclabs.com'],
       nativeCurrency: { name: 'Sonic', symbol: 'S', decimals: 18 },
@@ -334,7 +334,7 @@ const CHAINS = {
     explorer: 'https://explorer-sepolia.inkonchain.com',
     nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
     params: {
-      chainId: '0xBA50D',
+      chainId: '0xBA5ED',
       chainName: 'Ink Sepolia Testnet',
       rpcUrls: ['https://rpc-gel-sepolia.inkonchain.com'],
       nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },

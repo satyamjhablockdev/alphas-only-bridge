@@ -1409,6 +1409,18 @@ body::before {
 }
 .claim-badge.ready { color: #8FCBA0; }
 .claim-badge.pending { color: var(--arc-peach); }
+.claim-badge.claimed { color: var(--text-soft); }
+
+.claim-item.is-claimed { opacity: 0.65; }
+.claim-item.is-claimed:hover { opacity: 0.85; }
+
+.claim-action-note {
+  font-family: var(--ff-mono);
+  font-size: 0.62rem;
+  color: var(--text-soft);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .claim-badge .badge-dot {
   width: 5px; height: 5px;
   border-radius: 50%;
