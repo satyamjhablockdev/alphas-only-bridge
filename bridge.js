@@ -232,7 +232,7 @@ function renderModalList(query) {
     item.className = `modal-network-item${isActive ? ' active' : ''}${isDisabled ? ' disabled' : ''}`;
 
     item.innerHTML = `
-      <div class="modal-net-icon" style="background:${chain.color}22">${chain.icon}</div>
+      <div class="modal-net-icon">${chain.icon}</div>
       <div class="modal-net-info">
         <div class="modal-net-name">${chain.name}</div>
         <div class="modal-net-domain">CCTP Domain ${chain.domain}</div>
@@ -287,8 +287,9 @@ async function selectNetwork(chain) {
 function setNetworkDisplay(side, chain) {
   const icon = document.getElementById(`${side}-icon`);
   const label = document.getElementById(`${side}-label`);
-  icon.style.background = `${chain.color}22`;
-  icon.style.fontSize = '16px';
+  // Clear inline styles — the SVG logo is self-contained, no tint needed
+  icon.style.background = '';
+  icon.style.fontSize = '';
   icon.innerHTML = chain.icon;
   label.textContent = chain.name;
   label.className = 'net-label chosen';
@@ -644,7 +645,7 @@ function renderChainGrid() {
     pill.className = 'chain-pill';
     pill.title = `Domain ${chain.domain}`;
     pill.innerHTML = `
-      <span class="chain-dot" style="background:${chain.color}"></span>
+      <span class="chain-logo">${chain.icon}</span>
       ${chain.shortName}
     `;
     pill.onclick = () => {
