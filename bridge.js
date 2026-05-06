@@ -65,24 +65,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Wallet ──────────────────────────────────────────────
 async function connectWallet() {
+  // Clear any stale error from a previous attempt
+  hideError();
+
   if (!window.ethereum) {
-    showError('No wallet detected. Please install MetaMask.');
+    showError('No wallet detected. Please install MetaMask or another EVM wallet.');
     return;
   }
 
+  // If we're already connected (e.g. accountsChanged event landed first),
+  // skip the request entirely.
+  if (walletAddress) return;
+
+  // Only the connection request itself counts as "connection failed".
+  // Anything that happens AFTER eth_requestAccounts resolves means the wallet
+  // IS connected — we never report "failed" then.
+  let accounts;
   try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  } catch (e) {
+    if (e?.code === 4001 || e?.code === 'ACTION_REJECTED') return; // user rejected — silent
+    if (e?.code === -32002) {
+      showError('A wallet connection is already pending. Open your wallet to approve it.');
+      return;
+    }
+
+    // Race condition guards: the request may error even though the wallet did
+    // grant access (parallel accountsChanged event, or already-authorized session).
+    if (walletAddress) return; // accountsChanged handler already set us up
+    try {
+      const existing = await window.ethereum.request({ method: 'eth_accounts' });
+      if (existing && existing.length > 0) {
+        // We are connected — eth_requestAccounts erred but eth_accounts confirms it
+        try { await setupProvider(existing[0]); } catch (setupErr) {
+          console.warn('Post-connect setup warning:', setupErr?.message || setupErr);
+        }
+        return;
+      }
+    } catch {}
+
+    console.error('eth_requestAccounts failed:', e);
+    showError(`Could not connect wallet: ${extractErrorMessage(e)}`);
+    return;
+  }
+
+  if (!accounts || accounts.length === 0) {
+    showError('No accounts available. Please unlock your wallet and try again.');
+    return;
+  }
+
+  // Connection succeeded. setupProvider handles its own errors — we never
+  // report "connection failed" once the wallet has actually granted access.
+  try {
     await setupProvider(accounts[0]);
   } catch (e) {
-    if (e.code !== 4001) showError('Failed to connect wallet.');
+    console.warn('Post-connect setup warning (wallet IS connected):', e?.message || e);
   }
 }
 
 async function setupProvider(address) {
   // Use ethers from CDN if available, else fallback to raw RPC
   if (typeof ethers !== 'undefined') {
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    signer = provider.getSigner();
+    try {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+    } catch (e) {
+      console.warn('Provider init failed:', e);
+    }
   }
 
   walletAddress = address;
@@ -92,10 +141,19 @@ async function setupProvider(address) {
   document.getElementById('connect-btn').classList.add('connected');
   document.getElementById('net-dot').classList.add('connected');
 
-  const chainId = parseInt(await window.ethereum.request({ method: 'eth_chainId' }), 16);
-  updateNetworkPill(chainId);
+  // Best-effort chainId fetch — don't fail the connect flow if it errors
+  try {
+    const chainId = parseInt(await window.ethereum.request({ method: 'eth_chainId' }), 16);
+    updateNetworkPill(chainId);
+  } catch (e) {
+    console.warn('chainId fetch failed:', e);
+  }
 
-  if (fromChain) await refreshBalance();
+  // Best-effort balance refresh — never throws (has its own try/catch),
+  // but wrap defensively in case the implementation changes
+  if (fromChain) {
+    try { await refreshBalance(); } catch (e) { console.warn('refreshBalance failed:', e); }
+  }
   updateBridgeButton();
 }
 
